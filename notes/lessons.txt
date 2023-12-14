@@ -3,3 +3,10 @@ My lessons from building this project:
 Syntax:
  - 
 
+- Make smaller commits to reduce the complexity of refactoring.
+
+ - As I conducted test-driven development, I naturally built routes that passed various tests. However I've seen many opportunities to simplify and consolidate my code (e.g. consolidating my helper functions). However, I chose not to refactor until I finish achieving all the functionality required.
+
+ - And actually as I type this, I realize that I should commit earlier so that I'm refactoring smaller chunks of code.
+
+- Variable names and comments: Focus on describing the action.

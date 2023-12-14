@@ -1,11 +1,17 @@
-# Jobly Backend
+# Jobly Application
 
-This is the Express backend for Jobly, version 2.
+## Description
 
-To run this:
+- This is a pure API app built using Node, Express, PostgresSQL.
+- The app itself is a job-searching API consisting of 3 routes: /users, /jobs, /companies.
+- A 4th route (/auth) exists to handle authentication.
 
-    node server.js
+## Getting Started
 
-To run the tests:
+- Run application:
+  node server.js
 
-    jest -i
+## Testing
+
+- Run all tests:
+  jest -i

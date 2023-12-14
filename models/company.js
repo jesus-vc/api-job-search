@@ -1,12 +1,11 @@
 "use strict";
 
-const { query } = require("express");
 const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const {
-  sqlForPartialUpdate,
-  buildFilteredQueryParams,
-} = require("../helpers/sql");
+  buildPartialUpdateQuery,
+  buildCompanyFilteredQuery,
+} = require("../helpers/sqlBuilders");
 
 /** Related functions for companies. */
 
@@ -69,7 +68,7 @@ class Company {
    */
 
   static async findByFilters(filters) {
-    const { whereStatement, values } = buildFilteredQueryParams(filters, {
+    const { whereStatement, values } = buildCompanyFilteredQuery(filters, {
       name: "name" + " ILIKE ",
       minEmployees: "num_employees" + ">=",
       maxEmployees: "num_employees" + "<=",
@@ -91,28 +90,47 @@ class Company {
   /** Given a company handle, return data about company.
    *
    * Returns { handle, name, description, numEmployees, logoUrl, jobs }
-   *   where jobs is [{ id, title, salary, equity, companyHandle }, ...]
+   *   where jobs is [{ id, title, salary, equity }, ...]
    *
    * Throws NotFoundError if not found.
    **/
 
   static async get(handle) {
     const companyRes = await db.query(
-      `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           WHERE handle = $1`,
+      `SELECT
+        c.handle,
+        c.name,
+        c.description,
+        c.num_employees AS "numEmployees",
+        c.logo_url AS "logoUrl",
+       CASE 
+        WHEN
+          COUNT(j.id) > 0
+        THEN
+          jsonb_agg(jsonb_build_object(
+            'id', j.id,
+            'title', j.title,
+            'salary', j.salary,
+            'equity', j.equity::text
+            )) 
+        ELSE '[]'::jsonb
+        END AS "jobs"
+      FROM
+        companies AS c
+      LEFT JOIN
+        jobs AS j ON c.handle = j.company_handle
+      WHERE
+        c.handle = $1
+      GROUP BY
+        c.handle, c.name, c.description, c.num_employees, c.logo_url`,
       [handle]
     );
 
-    const company = companyRes.rows[0];
+    const companies = companyRes.rows[0];
 
-    if (!company) throw new NotFoundError(`No company: ${handle}`);
+    if (!companies) throw new NotFoundError(`No company: ${handle}`);
 
-    return company;
+    return companies;
   }
 
   /** Update company data with `data`.
@@ -128,7 +146,7 @@ class Company {
    */
 
   static async update(handle, data) {
-    const { setCols, values } = sqlForPartialUpdate(data, {
+    const { setCols, values } = buildPartialUpdateQuery(data, {
       numEmployees: "num_employees",
       logoUrl: "logo_url",
     });

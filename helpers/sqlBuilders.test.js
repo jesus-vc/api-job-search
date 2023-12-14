@@ -1,11 +1,11 @@
-const { sqlForPartialUpdate } = require("./sql");
+const { buildPartialUpdateQuery } = require("./sqlBuilders");
 
-describe("sqlForPartialUpdate", function () {
+describe("buildPartialUpdateQuery", function () {
   test("works: throws error when datatoUpdate is empty", function () {
     const datatoUpdate = {};
     const jsToSql = {};
     expect(() => {
-      sqlForPartialUpdate(datatoUpdate, jsToSql);
+      buildPartialUpdateQuery(datatoUpdate, jsToSql);
     }).toThrow(new Error("No data"));
   });
 
@@ -20,18 +20,21 @@ describe("sqlForPartialUpdate", function () {
       setCols: '"first_name"=$1, "age"=$2',
       values: ["Aliya", 32],
     };
-    expect(sqlForPartialUpdate(datatoUpdate, jsToSql)).toEqual(expectedObject);
+    expect(buildPartialUpdateQuery(datatoUpdate, jsToSql)).toEqual(
+      expectedObject
+    );
   });
 });
 
-//PEER should I write tests for sqlForFilteredQuery() if I'm already testing this function  via the route requests?
+//PEER Is it okay that I didn't write a unit test for buildPartialUpdateQuery() since it's already being tested via an integration test at the route level?
+// If this fn does require a unit rest, in production code how would I be able to tell which fns require unit testing when they're already being tested via integration tests?
 
-// describe("sqlForFilteredQuery", function () {
+// describe("buildPartialUpdateQuery", function () {
 //   test("works: throws error when datatoUpdate is empty", function () {
 //     const datatoUpdate = {};
 //     const jsToSql = {};
 //     expect(() => {
-//       sqlForPartialUpdate(datatoUpdate, jsToSql);
+//       buildPartialUpdateQuery(datatoUpdate, jsToSql);
 //     }).toThrow(new Error("No data"));
 //   });
 
@@ -46,6 +49,6 @@ describe("sqlForPartialUpdate", function () {
 //       setCols: '"first_name"=$1, "age"=$2',
 //       values: ["Aliya", 32],
 //     };
-//     expect(sqlForPartialUpdate(datatoUpdate, jsToSql)).toEqual(expectedObject);
+//     expect(buildPartialUpdateQuery(datatoUpdate, jsToSql)).toEqual(expectedObject);
 //   });
 // });

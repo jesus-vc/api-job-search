@@ -2,21 +2,29 @@
 
 /** Routes for users. */
 
-const jsonschema = require("jsonschema");
-
 const express = require("express");
+const router = express.Router();
+
+const User = require("../models/user");
+const Job = require("../models/job");
+const { createToken } = require("../helpers/tokens");
 const {
   ensureLoggedIn,
   ensureIsAdmin,
   ensureCorrectUser,
 } = require("../middleware/auth");
-const { BadRequestError } = require("../expressError");
-const User = require("../models/user");
-const { createToken } = require("../helpers/tokens");
-const userNewSchema = require("../schemas/userNew.json");
-const userUpdateSchema = require("../schemas/userUpdate.json");
 
-const router = express.Router();
+const {
+  validateUsersPostRequest,
+  validateUsersPatchRequest,
+} = require("../helpers/usersSchemaValidators");
+const { validateJobsIdParam } = require("../helpers/jobsSchemaValidators");
+
+//TODO delete commented out vars below once I get peer feedback on schema refactoring.
+// const jsonschema = require("jsonschema");
+// const { BadRequestError } = require("../expressError");
+// const userNewSchema = require("../schemas/userNew.json");
+// const userUpdateSchema = require("../schemas/userUpdate.json");
 
 /** POST / { user }  => { user, token }
  *
@@ -36,15 +44,59 @@ router.post(
   ensureIsAdmin,
   async function (req, res, next) {
     try {
-      const validator = jsonschema.validate(req.body, userNewSchema);
-      if (!validator.valid) {
-        const errs = validator.errors.map((e) => e.stack);
-        throw new BadRequestError(errs);
-      }
+      validateUsersPostRequest(req.body);
+
+      // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+      // const validator = jsonschema.validate(req.body, userNewSchema);
+      // if (!validator.valid) {
+      //   const errs = validator.errors.map((e) => e.stack);
+      //   throw new BadRequestError(errs);
+      // }
 
       const user = await User.register(req.body);
       const token = createToken(user);
       return res.status(201).json({ user, token });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+/** POST /:username/jobs/:id  => { applied: jobId }
+ *
+ * Submits job application for a user.
+ *
+ * This returns the jobId of the job application.
+ *
+ * Authorization required: Logged in user must be admin or match the :username value.
+ **/
+
+router.post(
+  "/:username/jobs/:id",
+  ensureLoggedIn,
+  ensureCorrectUser,
+  async function (req, res, next) {
+    try {
+      //validate schema of :id param value
+      validateJobsIdParam({
+        id: Number(req.params.id),
+      });
+
+      // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+      // const { error, value } = jobGetByIDSchema.validate({
+      //   id: Number(req.params.id),
+      // });
+      // if (error) throw new BadRequestError(error.message);
+
+      //Job.get() throws error if job id doesn't exist
+      await Job.get(req.params.id); //PEER Notice here that I'm calling the Job model directly. Would it be best practice to call the Job route instead
+
+      const applyRequest = await User.applyForJob(
+        req.params.username,
+        req.params.id
+      );
+
+      return res.status(201).json({ applied: applyRequest.jobId });
     } catch (err) {
       return next(err);
     }
@@ -104,11 +156,14 @@ router.patch(
   ensureCorrectUser,
   async function (req, res, next) {
     try {
-      const validator = jsonschema.validate(req.body, userUpdateSchema);
-      if (!validator.valid) {
-        const errs = validator.errors.map((e) => e.stack);
-        throw new BadRequestError(errs);
-      }
+      validateUsersPatchRequest(req.body);
+
+      // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+      // const validator = jsonschema.validate(req.body, userUpdateSchema);
+      // if (!validator.valid) {
+      //   const errs = validator.errors.map((e) => e.stack);
+      //   throw new BadRequestError(errs);
+      // }
 
       const user = await User.update(req.params.username, req.body);
       return res.json({ user });

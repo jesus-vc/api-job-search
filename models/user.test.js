@@ -7,6 +7,7 @@ const {
 } = require("../expressError");
 const db = require("../db.js");
 const User = require("./user.js");
+const Job = require("./job");
 const {
   commonBeforeAll,
   commonBeforeEach,
@@ -133,6 +134,19 @@ describe("findAll", function () {
 
 describe("get", function () {
   test("works", async function () {
+    const newJob = {
+      title: "Dev Level 4",
+      salary: 155300,
+      equity: 0.63,
+      companyHandle: "c3",
+    };
+    const username = "u1";
+
+    const jobCreated = await Job.create(newJob);
+    const jobId = jobCreated.id;
+    const application = await User.applyForJob(username, jobId);
+    expect(application.jobId).toEqual(jobId);
+
     let user = await User.get("u1");
     expect(user).toEqual({
       username: "u1",
@@ -140,6 +154,7 @@ describe("get", function () {
       lastName: "U1L",
       email: "u1@email.com",
       isAdmin: false,
+      jobs: [jobId],
     });
   });
 
@@ -214,8 +229,7 @@ describe("update", function () {
 describe("remove", function () {
   test("works", async function () {
     await User.remove("u1");
-    const res = await db.query(
-        "SELECT * FROM users WHERE username='u1'");
+    const res = await db.query("SELECT * FROM users WHERE username='u1'");
     expect(res.rows.length).toEqual(0);
   });
 
@@ -225,6 +239,50 @@ describe("remove", function () {
       fail();
     } catch (err) {
       expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  });
+});
+
+/************************************** applyForJob */
+
+describe("applyForJob", function () {
+  const newJob = {
+    title: "Dev Level 4",
+    salary: 155300,
+    equity: 0.63,
+    companyHandle: "c3",
+  };
+  const username = "u1";
+
+  test("works", async function () {
+    const jobCreated = await Job.create(newJob);
+    const jobId = jobCreated.id;
+    const application = await User.applyForJob(username, jobId);
+
+    expect(application).toEqual({
+      username,
+      jobId,
+    });
+
+    const responseDB = await db.query(
+      'SELECT username, job_id AS "jobId" FROM applications WHERE username=$1 AND job_id=$2',
+      [username, jobId]
+    );
+    expect(responseDB.rows[0]).toEqual({
+      username,
+      jobId,
+    });
+  });
+
+  test("fails: duplicate application ", async function () {
+    try {
+      const jobCreated = await Job.create(newJob);
+      const jobId = jobCreated.id;
+      await User.applyForJob(username, jobId);
+      await User.applyForJob(username, jobId);
+      fail();
+    } catch (err) {
+      expect(err.message).toContain(`duplicate`);
     }
   });
 });
