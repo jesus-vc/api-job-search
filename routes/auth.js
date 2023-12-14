@@ -1,16 +1,20 @@
 "use strict";
 
 /** Routes for authentication. */
-
-const jsonschema = require("jsonschema");
-
-const User = require("../models/user");
 const express = require("express");
 const router = new express.Router();
+
+const User = require("../models/user");
 const { createToken } = require("../helpers/tokens");
-const userAuthSchema = require("../schemas/userAuth.json");
-const userRegisterSchema = require("../schemas/userRegister.json");
-const { BadRequestError } = require("../expressError");
+//TODO delete commented out vars below once I get peer feedback on schema refactoring.
+// const { BadRequestError } = require("../expressError");
+// const jsonschema = require("jsonschema");
+// const userAuthSchema = require("../schemas/userAuth.json");
+// const userRegisterSchema = require("../schemas/userRegister.json");
+const {
+  validateUsersAuthRequest,
+  validateUsersRegisterRequest,
+} = require("../helpers/authSchemaValidators");
 
 /** POST /auth/token:  { username, password } => { token }
  *
@@ -21,11 +25,13 @@ const { BadRequestError } = require("../expressError");
 
 router.post("/token", async function (req, res, next) {
   try {
-    const validator = jsonschema.validate(req.body, userAuthSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
-      throw new BadRequestError(errs);
-    }
+    validateUsersAuthRequest(req.body);
+    // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+    // const validator = jsonschema.validate(req.body, userAuthSchema);
+    // if (!validator.valid) {
+    //   const errs = validator.errors.map((e) => e.stack);
+    //   throw new BadRequestError(errs);
+    // }
 
     const { username, password } = req.body;
     const user = await User.authenticate(username, password);
@@ -35,7 +41,6 @@ router.post("/token", async function (req, res, next) {
     return next(err);
   }
 });
-
 
 /** POST /auth/register:   { user } => { token }
  *
@@ -48,11 +53,15 @@ router.post("/token", async function (req, res, next) {
 
 router.post("/register", async function (req, res, next) {
   try {
-    const validator = jsonschema.validate(req.body, userRegisterSchema);
-    if (!validator.valid) {
-      const errs = validator.errors.map(e => e.stack);
-      throw new BadRequestError(errs);
-    }
+    validateUsersRegisterRequest(req.body);
+
+    // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+
+    // const validator = jsonschema.validate(req.body, userRegisterSchema);
+    // if (!validator.valid) {
+    //   const errs = validator.errors.map((e) => e.stack);
+    //   throw new BadRequestError(errs);
+    // }
 
     const newUser = await User.register({ ...req.body, isAdmin: false });
     const token = createToken(newUser);
@@ -61,6 +70,5 @@ router.post("/register", async function (req, res, next) {
     return next(err);
   }
 });
-
 
 module.exports = router;

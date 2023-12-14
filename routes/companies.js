@@ -1,19 +1,22 @@
 "use strict";
 
 /** Routes for companies. */
-
-const jsonschema = require("jsonschema");
 const express = require("express");
-
-const { BadRequestError } = require("../expressError");
-const { ensureLoggedIn, ensureIsAdmin } = require("../middleware/auth");
-const Company = require("../models/company");
-
-const companyNewSchema = require("../schemas/companyNew.json");
-const companyUpdateSchema = require("../schemas/companyUpdate.json");
-const { validateSQLInput } = require("../helpers/sql");
-
 const router = new express.Router();
+
+const Company = require("../models/company");
+// const { BadRequestError } = require("../expressError");
+
+const { ensureLoggedIn, ensureIsAdmin } = require("../middleware/auth");
+
+// const jsonschema = require("jsonschema");
+// const companyNewSchema = require("../schemas/companyNew.json");
+// const companyUpdateSchema = require("../schemas/companyUpdate.json");
+const {
+  validateCompaniesGetRequest,
+  validateCompaniesPostRequest,
+  validateCompaniesPatchRequest,
+} = require("../helpers/companiesSchemaValidators");
 
 /** POST / { company } =>  { company }
  *
@@ -21,7 +24,7 @@ const router = new express.Router();
  *
  * Returns { handle, name, description, numEmployees, logoUrl }
  *
- * Authorization required: login
+ * Authorization required: logged in as admin.
  */
 
 router.post(
@@ -30,11 +33,15 @@ router.post(
   ensureIsAdmin,
   async function (req, res, next) {
     try {
-      const validator = jsonschema.validate(req.body, companyNewSchema);
-      if (!validator.valid) {
-        const errs = validator.errors.map((e) => e.stack);
-        throw new BadRequestError(errs);
-      }
+      validateCompaniesPostRequest(req.body);
+
+      // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+
+      // const validator = jsonschema.validate(req.body, companyNewSchema);
+      // if (!validator.valid) {
+      //   const errs = validator.errors.map((e) => e.stack);
+      //   throw new BadRequestError(errs);
+      // }
 
       const company = await Company.create(req.body);
       return res.status(201).json({ company });
@@ -57,12 +64,17 @@ router.post(
 
 router.get("/", async function (req, res, next) {
   try {
+    //handle for filtered queries
+    //PEER This could be placed into a funtion such as "if(requestHasFilters)". But should I only do it once this logic becomes repetitive across the codebase?
     if (Object.keys(req.query).length > 0) {
-      // validateSQLInput() fn will throw errors if the input schema or logic is invalid.
-      validateSQLInput(req.query);
+      // validateCompaniesGetRequest() fn will throw errors if the input schema or logic is invalid.
+      //PEER Is it okay to call functions where the error throwing is done externally?
+      validateCompaniesGetRequest(req.query);
+
       const filteredCompanies = await Company.findByFilters(req.query);
       return res.json({ companies: filteredCompanies });
     }
+    //PEER Would adding the else{} stmt here make the code more readable?
     const companies = await Company.findAll();
     return res.json({ companies });
   } catch (err) {
@@ -104,12 +116,14 @@ router.patch(
   ensureIsAdmin,
   async function (req, res, next) {
     try {
-      const validator = jsonschema.validate(req.body, companyUpdateSchema);
-      if (!validator.valid) {
-        const errs = validator.errors.map((e) => e.stack);
-        throw new BadRequestError(errs);
-      }
+      validateCompaniesPatchRequest(req.body);
 
+      // TODO Will delete the code snippet below once I get feedback on my schema refactoring.
+      // const validator = jsonschema.validate(req.body, companyUpdateSchema);
+      // if (!validator.valid) {
+      //   const errs = validator.errors.map((e) => e.stack);
+      //   throw new BadRequestError(errs);
+      // }
       const company = await Company.update(req.params.handle, req.body);
       return res.json({ company });
     } catch (err) {
@@ -122,6 +136,8 @@ router.patch(
  *
  * Authorization: login
  */
+
+//PEER would it be necessary to validate the :handle input here?
 
 router.delete(
   "/:handle",

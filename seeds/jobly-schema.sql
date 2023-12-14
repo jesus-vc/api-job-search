@@ -34,3 +34,24 @@ CREATE TABLE applications (
     REFERENCES jobs ON DELETE CASCADE,
   PRIMARY KEY (username, job_id)
 );
+
+-- Trigger function to prevent updates on jobs.company_handle
+CREATE OR REPLACE FUNCTION prevent_updates_on_jobs()
+RETURNS trigger AS $$
+BEGIN 
+  IF OLD.company_handle IS DISTINCT FROM NEW.company_handle THEN
+      RAISE EXCEPTION 'Updating company_handle in jobs table is not allowed';
+  END IF;
+
+  IF OLD.id IS DISTINCT FROM NEW.id THEN
+      RAISE EXCEPTION 'Updating id in jobs table is not allowed';
+  END IF;
+  RETURN NEW;
+  END;
+$$ LANGUAGE plpgsql;
+
+-- Attach the trigger to the jobs table
+CREATE TRIGGER prevent_updates_on_jobs
+BEFORE UPDATE ON jobs
+FOR EACH ROW
+EXECUTE PROCEDURE prevent_updates_on_jobs();

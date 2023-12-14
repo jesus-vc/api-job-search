@@ -236,19 +236,47 @@ describe("GET /companies/:handle", function () {
         description: "Desc1",
         numEmployees: 1,
         logoUrl: "http://c1.img",
+        jobs: [
+          {
+            id: expect.any(Number),
+            title: "Dev Level 1",
+            salary: 120000,
+            equity: "0.12",
+          },
+          {
+            id: expect.any(Number),
+            title: "Dev Level 0",
+            salary: 80000,
+            equity: "0",
+          },
+        ],
       },
     });
   });
 
   test("works for anon: company w/o jobs", async function () {
-    const resp = await request(app).get(`/companies/c2`);
+    const newCompany = {
+      handle: "c10",
+      name: "New",
+      description: "DescNew",
+      numEmployees: 10,
+      logoUrl: "http://new.img",
+    };
+    const result = await request(app)
+      .post("/companies")
+      .send(newCompany)
+      .set("authorization", `Bearer ${adminToken}`);
+
+    expect(result.statusCode).toEqual(201);
+    const resp = await request(app).get(`/companies/c10`);
     expect(resp.body).toEqual({
       company: {
-        handle: "c2",
-        name: "C2",
-        description: "Desc2",
-        numEmployees: 2,
-        logoUrl: "http://c2.img",
+        handle: "c10",
+        name: "New",
+        description: "DescNew",
+        numEmployees: 10,
+        logoUrl: "http://new.img",
+        jobs: [],
       },
     });
   });

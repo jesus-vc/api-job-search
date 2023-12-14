@@ -3,6 +3,7 @@
 const db = require("../db.js");
 const User = require("../models/user");
 const Company = require("../models/company");
+const Job = require("../models/job");
 const { createToken } = require("../helpers/tokens");
 
 async function commonBeforeAll() {
@@ -57,6 +58,34 @@ async function commonBeforeAll() {
     password: "password3",
     isAdmin: false,
   });
+
+  const job1 = await Job.create({
+    title: "Dev Level 1",
+    salary: 120000,
+    equity: 0.12,
+    companyHandle: "c1",
+  });
+
+  const job2 = await Job.create({
+    title: "Dev Level 2",
+    salary: 140000,
+    equity: 0.442,
+    companyHandle: "c3",
+  });
+  const job3 = await Job.create({
+    title: "Dev Level 3",
+    salary: 150000,
+    equity: 0.552,
+    companyHandle: "c2",
+  });
+  const job4 = await Job.create({
+    title: "Dev Level 0",
+    salary: 80000,
+    equity: 0,
+    companyHandle: "c1",
+  });
+
+  return [job1, job2, job3, job4];
 }
 
 async function commonBeforeEach() {
@@ -68,6 +97,7 @@ async function commonAfterEach() {
 }
 
 async function commonAfterAll() {
+  //PEER Is it necessary to add a step here to delete all the data created earlier or do the DELETE statements above accomplish this?
   await db.end();
 }
 
